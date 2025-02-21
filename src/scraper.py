@@ -35,35 +35,35 @@ class LoyverseScraper:
         self.setup_driver()
 
     def setup_driver(self):
-        """Set up Chrome driver with appropriate options for both local and CI environments"""
+        """Set up browser driver with appropriate options for both local and CI environments"""
         try:
             # Determine if running in GitHub Actions
             is_github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
             
-            # Set up Chrome options
+            # Set up browser options
             options = self.config.chrome_options
             
             if is_github_actions:
-                # Additional options for GitHub Actions environment
+                # Configure for Chromium in GitHub Actions environment
+                options.binary_location = '/usr/bin/chromium-browser'
                 options.add_argument('--no-sandbox')
                 options.add_argument('--disable-dev-shm-usage')
-                options.binary_location = '/usr/bin/google-chrome'
                 
-                # Use system ChromeDriver in GitHub Actions
-                service = Service('/usr/local/bin/chromedriver')
+                # Use system ChromeDriver
+                service = Service('/usr/bin/chromedriver')
             else:
                 # Use webdriver_manager for local development
                 service = Service(ChromeDriverManager().install())
             
-            print("Setting up Chrome driver...")
+            print("Setting up browser driver...")
             self.driver = webdriver.Chrome(
                 service=service,
                 options=options
             )
-            print("Chrome driver setup completed successfully")
+            print("Browser driver setup completed successfully")
             
         except Exception as e:
-            print(f"Error setting up Chrome driver: {str(e)}")
+            print(f"Error setting up browser driver: {str(e)}")
             raise
 
     def login(self):
