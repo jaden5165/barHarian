@@ -38,24 +38,42 @@ jobs:
       run: |
         sudo timedatectl set-timezone Asia/Kuala_Lumpur
         
-    - name: Set up Chrome
+    - name: Set up Chrome and ChromeDriver
       run: |
-        # Install Chrome browser
+        # First, download and add the Google Chrome repository key
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/sources.list.d/google.list'
+        
+        # Create the Google Chrome repository configuration
+        # Note: Using the correct path /etc/apt/sources.list.d/ instead of /etc/sources.list.d/
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        
+        # Update package lists to include Google Chrome repository
         sudo apt-get update
+        
+        # Install Google Chrome stable version
         sudo apt-get install -y google-chrome-stable
         
-        # Install ChromeDriver
+        # Get the major version of installed Chrome
         CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1)
+        echo "Chrome version: ${CHROME_VERSION}"
+        
+        # Download matching ChromeDriver version
         CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+        echo "ChromeDriver version: ${CHROMEDRIVER_VERSION}"
+        
+        # Download and install ChromeDriver
         wget -q "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
         unzip chromedriver_linux64.zip
         sudo mv chromedriver /usr/local/bin/
         sudo chmod +x /usr/local/bin/chromedriver
         
+        # Clean up downloaded files
+        rm chromedriver_linux64.zip
+        
         # Verify installations
+        echo "Installed Chrome version:"
         google-chrome --version
+        echo "Installed ChromeDriver version:"
         chromedriver --version
         
     - name: Install Python dependencies
