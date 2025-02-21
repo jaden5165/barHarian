@@ -1,0 +1,92 @@
+name: Daily Loyverse Scraping
+
+on:
+  schedule:
+    # Runs at 00:00 UTC (8:00 AM Malaysia time)
+    - cron: '0 0 * * *'
+  
+  # Allow manual triggering from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    env:
+      PYTHONUNBUFFERED: 1
+      TZ: 'Asia/Kuala_Lumpur'  # Set timezone for consistent timestamps
+      
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        
+    - name: Set up timezone
+      run: |
+        sudo timedatectl set-timezone Asia/Kuala_Lumpur
+        
+    - name: Install Chrome and dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chromium-browser chromium-chromedriver
+        chromium-browser --version
+        chromedriver --version
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run scraper
+      env:
+        LOYVERSE_ACCOUNTS: ${{ secrets.LOYVERSE_ACCOUNTS }}
+        TWOCAPTCHA_API_KEY: ${{ secrets.TWOCAPTCHA_API_KEY }}
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
+        HEADLESS: "true"
+      run: |
+        python -m src.scraper
+
+    - name: Upload Excel report as artifact
+      if: always()  # Upload even if script fails
+      uses: actions/upload-artifact@v3
+      with:
+        name: loyverse-report-${{ github.run_id }}
+        path: barHarian_*.xlsx
+        retention-days: 7  # Keep reports for 7 days
+        
+    - name: Handle failure
+      if: failure()
+      env:
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
+      run: |
+        python -c "
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import os
+
+        msg = MIMEMultipart()
+        msg['From'] = os.environ['EMAIL_USERNAME']
+        msg['To'] = os.environ['EMAIL_RECIPIENTS']
+        msg['Subject'] = 'Loyverse Scraper Failed'
+
+        body = f'''
+        The Loyverse scraper failed to run.
+        Repository: {os.environ['GITHUB_REPOSITORY']}
+        Workflow run: https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}
+        '''
+        msg.attach(MIMEText(body, 'plain'))
+
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(os.environ['EMAIL_USERNAME'], os.environ['EMAIL_PASSWORD'])
+            server.send_message(msg)
+        "
