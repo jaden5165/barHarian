@@ -2,12 +2,7 @@ name: Daily Loyverse Scraping
 
 on:
   schedule:
-    - cron: '0 4 * * *'   # 12:00 PM MYT
-    - cron: '0 6 * * *'   # 2:00 PM MYT
-    - cron: '0 8 * * *'   # 4:00 PM MYT
-    - cron: '0 10 * * *'  # 6:00 PM MYT
-    - cron: '0 12 * * *'  # 8:00 PM MYT
-    - cron: '0 14 * * *'  # 10:00 PM MYT
+    - cron: '0 0 * * *'   # 12:00 PM MYT
   workflow_dispatch:      # Allows manual triggering from GitHub interface
 
 jobs:
