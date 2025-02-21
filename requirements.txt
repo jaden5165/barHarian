@@ -6,3 +6,6 @@ webdriver-manager==4.0.1
 xlsxwriter==3.1.9
 requests==2.31.0
 python-dotenv==1.0.0
+blinker==1.6.3  # Added explicit blinker version
+urllib3==2.0.7   # Added to ensure compatibility
+certifi>=2023.7.22  # Added for security

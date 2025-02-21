@@ -48,7 +48,17 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install --upgrade setuptools wheel
+        # First install blinker explicitly
+        pip install blinker==1.6.3
+        # Then install other requirements
         pip install -r requirements.txt
+        # Verify installations
+        pip list
+    
+    - name: Verify selenium-wire installation
+      run: |
+        python -c "import seleniumwire.webdriver; print('selenium-wire successfully imported')"
         
     - name: Run scraper
       env:
