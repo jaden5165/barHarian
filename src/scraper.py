@@ -352,8 +352,7 @@ def main():
         
         # Set up dates
         today = date.today()
-        yesterday = today - timedelta(days=1)
-        report_date = str(yesterday)
+        report_date = str(today)
         
         # Create Excel workbook
         workbook_name = f"barHarian_{report_date}.xlsx"
