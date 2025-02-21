@@ -38,11 +38,24 @@ jobs:
       run: |
         sudo timedatectl set-timezone Asia/Kuala_Lumpur
         
-    - name: Install Chrome and dependencies
+    - name: Set up Chrome
       run: |
+        # Install Chrome browser
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/sources.list.d/google.list'
         sudo apt-get update
-        sudo apt-get install -y chromium-browser chromium-chromedriver
-        chromium-browser --version
+        sudo apt-get install -y google-chrome-stable
+        
+        # Install ChromeDriver
+        CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1)
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+        wget -q "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
+        
+        # Verify installations
+        google-chrome --version
         chromedriver --version
         
     - name: Install Python dependencies
