@@ -11,10 +11,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    
-    env:
-      PYTHONUNBUFFERED: 1
-      TZ: 'Asia/Kuala_Lumpur'
       
     steps:
     - name: Check out repository
