@@ -128,33 +128,80 @@ class LoyverseScraper:
             print(f"Login failed: {str(e)}")
             return False
         
-    def collect_store_name_id(self):
-        """Collect store names and IDs"""
-        time.sleep(10)
-        name_ids = []
-        soup = BeautifulSoup(self.driver.page_source, "html.parser")
-        allsoup = soup.find_all('div', {'class': 'listCheckbox'})
+    # def collect_store_name_id(self):
+    #     """Collect store names and IDs"""
+    #     time.sleep(10)
+    #     name_ids = []
+    #     soup = BeautifulSoup(self.driver.page_source, "html.parser")
+    #     allsoup = soup.find_all('div', {'class': 'listCheckbox'})
         
-        for each_element in allsoup[2:]:
-            try:
-                if each_element.text.strip() in self.invalid_outlets or each_element['id'] in self.invalid_outlets:
-                    continue
-                name_ids.append((each_element.text.strip(), each_element['id']))
-            except Exception:
-                pass
+    #     for each_element in allsoup[2:]:
+    #         try:
+    #             if each_element.text.strip() in self.invalid_outlets or each_element['id'] in self.invalid_outlets:
+    #                 continue
+    #             name_ids.append((each_element.text.strip(), each_element['id']))
+    #         except Exception:
+    #             pass
                 
-        self.name_ids = name_ids
-        if not self.name_ids:
-            print('No stores found, re-running login process...')
-            self.login()
-            self.collect_store_name_id()
+    #     self.name_ids = name_ids
+    #     if not self.name_ids:
+    #         print('No stores found, re-running login process...')
+    #         self.login()
+    #         self.collect_store_name_id()
         
-        print(f'Total Stores = {len(self.name_ids)}.')
-        if len(self.name_ids) < 1:
-            print('Re-run...')
-            self.driver.refresh()
-            self.login()
-            self.collect_store_name_id()
+    #     print(f'Total Stores = {len(self.name_ids)}.')
+    #     if len(self.name_ids) < 1:
+    #         print('Re-run...')
+    #         self.driver.refresh()
+    #         self.login()
+    #         self.collect_store_name_id()
+
+    def collect_store_name_id(self, max_attempts=5):
+        """
+        Collect store names and IDs with a maximum number of retry attempts
+        
+        Args:
+            max_attempts: Maximum number of retry attempts before giving up
+        """
+        attempt_count = 0
+        
+        while attempt_count < max_attempts:
+            attempt_count += 1
+            print(f"Store collection attempt {attempt_count}/{max_attempts}")
+            
+            time.sleep(10)
+            name_ids = []
+            try:
+                soup = BeautifulSoup(self.driver.page_source, "html.parser")
+                allsoup = soup.find_all('div', {'class': 'listCheckbox'})
+                
+                for each_element in allsoup[2:]:
+                    try:
+                        if each_element.text.strip() in self.invalid_outlets or each_element['id'] in self.invalid_outlets:
+                            continue
+                        name_ids.append((each_element.text.strip(), each_element['id']))
+                    except Exception:
+                        pass
+                        
+                self.name_ids = name_ids
+                
+                if self.name_ids:
+                    print(f'Found {len(self.name_ids)} stores on attempt {attempt_count}.')
+                    return True  # Success
+            except Exception as e:
+                print(f"Error during store collection attempt {attempt_count}: {str(e)}")
+            
+            # If we get here, no stores were found or an error occurred
+            if attempt_count < max_attempts:
+                print(f'No stores found on attempt {attempt_count}, trying again...')
+                self.driver.refresh()
+                time.sleep(2)
+                self.login()
+            else:
+                print(f'Failed to find stores after {max_attempts} attempts. Moving to next account.')
+                return False  # Give up
+        
+        return False  # Should never reach here, but just in case
 
     def request_earnings_receipt(self, startdate: str, enddate: str, outletID: Tuple[str, str]):
         """Get earnings receipt data"""
@@ -369,56 +416,84 @@ class LoyverseScraper:
         time.sleep(2)
         print("Fail List:", self.fail_list)
 
-def main():
-    """Main function to run the scraper"""
-    try:
-        config = Config()
+# def main():
+#     """Main function to run the scraper"""
+#     try:
+#         config = Config()
         
-        # Set up dates
-        today = date.today()
-        yesterday = today - timedelta(days=1)
-        report_date = str(yesterday)
+#         # Set up dates
+#         today = date.today()
+#         yesterday = today - timedelta(days=1)
+#         report_date = str(yesterday)
         
-        # Create Excel workbook
-        workbook_name = f"barHarian_{report_date}.xlsx"
-        workbook = create_workbook(workbook_name)
+#         # Create Excel workbook
+#         workbook_name = f"barHarian_{report_date}.xlsx"
+#         workbook = create_workbook(workbook_name)
         
-        # Process each account
-        for account in config.accounts:
-            try:
-                print(f"\nProcessing account: {account['email']}")
+#         # Process each account
+#         for account in config.accounts:
+#             try:
+#                 print(f"\nProcessing account: {account['email']}")
                 
-                # Create worksheet
-                worksheet = workbook.add_worksheet(account['email'].split('@')[0])
+#                 # Create worksheet
+#                 worksheet = workbook.add_worksheet(account['email'].split('@')[0])
                 
-                # Setup worksheet formatting
-                setup_worksheet_formatting(workbook, worksheet)
+#                 # Setup worksheet formatting
+#                 setup_worksheet_formatting(workbook, worksheet)
                 
-                # Initialize scraper
-                scraper = LoyverseScraper(account, config, worksheet)
-                scraper.start_date = report_date
-                scraper.end_date = report_date
+#                 # Initialize scraper
+#                 scraper = LoyverseScraper(account, config, worksheet)
+#                 scraper.start_date = report_date
+#                 scraper.end_date = report_date
                 
-                # Run scraper
-                scraper.main()
+#                 # Run scraper
+#                 scraper.main()
                 
-            except Exception as e:
-                print(f"Error processing account {account['email']}: {str(e)}")
-                continue
+#             except Exception as e:
+#                 print(f"Error processing account {account['email']}: {str(e)}")
+#                 continue
         
-        # Close workbook
-        workbook.close()
+#         # Close workbook
+#         workbook.close()
         
-        # Send report
-        if os.path.isfile(workbook_name):
-            send_report(workbook_name, config.email_config)
-        else:
-            print(f"Report file not found: {workbook_name}")
+#         # Send report
+#         if os.path.isfile(workbook_name):
+#             send_report(workbook_name, config.email_config)
+#         else:
+#             print(f"Report file not found: {workbook_name}")
             
-    except Exception as e:
-        print(f"Error in main execution: {str(e)}")
-        raise
+#     except Exception as e:
+#         print(f"Error in main execution: {str(e)}")
+#         raise
 
+def main(self):
+    """Main execution method with early exit if no stores found"""
+    if not self.login():
+        print("Login failed, skipping this account")
+        return
+        
+    # Try to collect store information, limited to 5 attempts
+    if not self.collect_store_name_id(max_attempts=5):
+        print("Failed to collect store information after maximum attempts, skipping this account")
+        self.driver.close()
+        self.driver.quit()
+        return
+    
+    # Continue only if we have stores
+    if not self.name_ids:
+        print("No stores found, skipping this account")
+        self.driver.close()
+        self.driver.quit()
+        return
+        
+    # Proceed with the rest of the execution
+    self.get_earnings_report()
+    self.file_writting()
+    self.driver.close()
+    self.driver.quit()
+    time.sleep(2)
+    print("Fail List:", self.fail_list)
+    
 if __name__ == "__main__":
     start_time = time.time()
     print(f"Start time {datetime.now()} ...")
