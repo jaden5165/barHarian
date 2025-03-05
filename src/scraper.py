@@ -466,33 +466,55 @@ class LoyverseScraper:
 #         print(f"Error in main execution: {str(e)}")
 #         raise
 
-def main(self):
-    """Main execution method with early exit if no stores found"""
-    if not self.login():
-        print("Login failed, skipping this account")
-        return
+def main():
+    """Main function to run the scraper"""
+    try:
+        config = Config()
         
-    # Try to collect store information, limited to 5 attempts
-    if not self.collect_store_name_id(max_attempts=5):
-        print("Failed to collect store information after maximum attempts, skipping this account")
-        self.driver.close()
-        self.driver.quit()
-        return
-    
-    # Continue only if we have stores
-    if not self.name_ids:
-        print("No stores found, skipping this account")
-        self.driver.close()
-        self.driver.quit()
-        return
+        # Set up dates
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        report_date = str(yesterday)
         
-    # Proceed with the rest of the execution
-    self.get_earnings_report()
-    self.file_writting()
-    self.driver.close()
-    self.driver.quit()
-    time.sleep(2)
-    print("Fail List:", self.fail_list)
+        # Create Excel workbook
+        workbook_name = f"barHarian_{report_date}.xlsx"
+        workbook = create_workbook(workbook_name)
+        
+        # Process each account
+        for account in config.accounts:
+            try:
+                print(f"\nProcessing account: {account['email']}")
+                
+                # Create worksheet
+                worksheet = workbook.add_worksheet(account['email'].split('@')[0])
+                
+                # Setup worksheet formatting
+                setup_worksheet_formatting(workbook, worksheet)
+                
+                # Initialize scraper
+                scraper = LoyverseScraper(account, config, worksheet)
+                scraper.start_date = report_date
+                scraper.end_date = report_date
+                
+                # Run scraper
+                scraper.main()
+                
+            except Exception as e:
+                print(f"Error processing account {account['email']}: {str(e)}")
+                continue
+        
+        # Close workbook
+        workbook.close()
+        
+        # Send report
+        if os.path.isfile(workbook_name):
+            send_report(workbook_name, config.email_config)
+        else:
+            print(f"Report file not found: {workbook_name}")
+            
+    except Exception as e:
+        print(f"Error in main execution: {str(e)}")
+        raise
     
 if __name__ == "__main__":
     start_time = time.time()
